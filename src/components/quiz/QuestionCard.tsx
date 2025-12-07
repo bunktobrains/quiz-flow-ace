@@ -29,13 +29,11 @@ export const QuestionCard = ({
   showResult = false,
   isCorrect,
 }: QuestionCardProps) => {
-  const optionLabels = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
-
   return (
     <Card className="border-4 border-foreground shadow-lg w-full max-w-2xl mx-auto">
-      <CardHeader className="border-b-4 border-foreground bg-muted">
-        <div className="flex items-center justify-between">
-          <span className="font-mono text-sm font-bold uppercase">
+      <CardHeader className="border-b-4 border-foreground bg-muted p-3 sm:p-6">
+        <div className="flex items-center justify-between gap-2">
+          <span className="font-mono text-xs sm:text-sm font-bold uppercase">
             Question {questionNumber} / {totalQuestions}
           </span>
           {showTimer && isActive && (
@@ -47,21 +45,21 @@ export const QuestionCard = ({
           )}
         </div>
         <div className="flex items-center gap-2 text-xs text-muted-foreground mt-2">
-          <span className="px-2 py-0.5 bg-success text-success-foreground font-mono">
+          <span className="px-2 py-0.5 bg-success text-success-foreground font-mono text-xs">
             +{question.pointsIfCorrect}
           </span>
           {question.pointsIfWrong !== 0 && (
-            <span className="px-2 py-0.5 bg-destructive text-destructive-foreground font-mono">
+            <span className="px-2 py-0.5 bg-destructive text-destructive-foreground font-mono text-xs">
               {question.pointsIfWrong}
             </span>
           )}
         </div>
       </CardHeader>
-      <CardContent className="p-6">
-        <h2 className="text-xl font-bold mb-6">{question.stem}</h2>
+      <CardContent className="p-3 sm:p-6">
+        <h2 className="text-base sm:text-xl font-bold mb-4 sm:mb-6">{question.stem}</h2>
         
         {question.media.length > 0 && (
-          <div className="mb-6">
+          <div className="mb-4 sm:mb-6">
             {question.media.map((m, idx) => (
               m.type === 'image' && (
                 <img 
@@ -75,8 +73,8 @@ export const QuestionCard = ({
           </div>
         )}
 
-        <div className="grid gap-3">
-          {question.options.map((option, idx) => {
+        <div className="grid gap-2 sm:gap-3">
+          {question.options.map((option) => {
             const isSelected = selectedOptions.includes(option.oid);
             const isCorrectOption = question.correct.includes(option.oid);
             
@@ -98,26 +96,26 @@ export const QuestionCard = ({
                 key={option.oid}
                 variant={buttonVariant}
                 className={cn(
-                  'h-auto py-4 px-6 justify-start text-left border-2 font-normal',
+                  'h-auto py-3 sm:py-4 px-3 sm:px-6 justify-start text-left border-2 font-normal min-h-[48px]',
                   additionalClasses,
                   !isActive && 'pointer-events-none opacity-70'
                 )}
                 onClick={() => isActive && onSelectOption(option.oid)}
                 disabled={!isActive}
               >
-                <span className="shrink-0 w-8 h-8 flex items-center justify-center border-2 border-current font-bold mr-4">
-                  {optionLabels[idx]}
+                <span className="shrink-0 w-6 h-6 sm:w-8 sm:h-8 flex items-center justify-center border-2 border-current font-bold mr-2 sm:mr-4 text-xs sm:text-sm">
+                  {option.oid}
                 </span>
-                <span className="flex-1">{option.text}</span>
+                <span className="flex-1 text-sm sm:text-base">{option.text}</span>
               </Button>
             );
           })}
         </div>
 
         {showResult && question.explanation && (
-          <div className="mt-6 p-4 border-2 border-foreground bg-muted">
-            <p className="text-sm font-bold uppercase mb-1">Explanation</p>
-            <p className="text-sm">{question.explanation}</p>
+          <div className="mt-4 sm:mt-6 p-3 sm:p-4 border-2 border-foreground bg-muted">
+            <p className="text-xs sm:text-sm font-bold uppercase mb-1">Explanation</p>
+            <p className="text-xs sm:text-sm">{question.explanation}</p>
           </div>
         )}
       </CardContent>

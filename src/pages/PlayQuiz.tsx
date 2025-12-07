@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { QuestionCard } from '@/components/quiz/QuestionCard';
@@ -19,6 +19,7 @@ const PlayQuiz = () => {
   
   const displayName = searchParams.get('name') || 'Anonymous';
   const token = searchParams.get('t') || '';
+  const phoneNumber = searchParams.get('phone') || '';
 
   const [quiz, setQuiz] = useState<Quiz | null>(null);
   const [participants, setParticipants] = useState<QuizParticipant[]>([]);
@@ -31,6 +32,7 @@ const PlayQuiz = () => {
   const [showResult, setShowResult] = useState(false);
   const [quizStatus, setQuizStatus] = useState<Quiz['status']>('ready');
   const [isLoading, setIsLoading] = useState(true);
+  const autoAdvanceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Load quiz and join
   useEffect(() => {
@@ -41,6 +43,15 @@ const PlayQuiz = () => {
 
     loadQuizAndJoin();
   }, [id, displayName]);
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (autoAdvanceTimeoutRef.current) {
+        clearTimeout(autoAdvanceTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // Subscribe to realtime events
   useEffect(() => {
@@ -174,7 +185,7 @@ const PlayQuiz = () => {
         toast.info(`Name taken, joining as ${finalName}`);
       }
 
-      // Join as participant
+      // Join as participant with phone number (internal use)
       const { data: newParticipant, error: joinError } = await supabase
         .from('quiz_participants')
         .insert({
@@ -182,6 +193,7 @@ const PlayQuiz = () => {
           display_name: finalName,
           score: 0,
           correct_count: 0,
+          phone_number: phoneNumber || null,
         } as never)
         .select()
         .single();
@@ -251,10 +263,10 @@ const PlayQuiz = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="min-h-screen flex items-center justify-center bg-background p-4">
         <div className="text-center">
-          <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-muted-foreground">Joining quiz...</p>
+          <div className="w-10 h-10 sm:w-12 sm:h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-sm sm:text-base text-muted-foreground">Joining quiz...</p>
         </div>
       </div>
     );
@@ -281,25 +293,25 @@ const PlayQuiz = () => {
     const myPosition = sortedParticipants.findIndex((p) => p.participantId === participantId) + 1;
 
     return (
-      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6">
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
         <Card className="w-full max-w-lg border-4 border-foreground shadow-lg">
-          <CardHeader className="border-b-4 border-foreground bg-primary text-primary-foreground text-center">
-            <Trophy className="h-12 w-12 mx-auto mb-2" />
-            <CardTitle className="text-2xl font-bold">Quiz Complete!</CardTitle>
+          <CardHeader className="border-b-4 border-foreground bg-primary text-primary-foreground text-center p-4 sm:p-6">
+            <Trophy className="h-10 w-10 sm:h-12 sm:w-12 mx-auto mb-2" />
+            <CardTitle className="text-xl sm:text-2xl font-bold">Quiz Complete!</CardTitle>
           </CardHeader>
-          <CardContent className="p-6 text-center">
-            <div className="mb-6">
-              <p className="text-muted-foreground mb-2">Your final score</p>
-              <p className="text-6xl font-mono font-bold text-primary">{score}</p>
-              <p className="text-sm text-muted-foreground mt-2">
+          <CardContent className="p-4 sm:p-6 text-center">
+            <div className="mb-4 sm:mb-6">
+              <p className="text-sm text-muted-foreground mb-2">Your final score</p>
+              <p className="text-4xl sm:text-6xl font-mono font-bold text-primary">{score}</p>
+              <p className="text-xs sm:text-sm text-muted-foreground mt-2">
                 {correctCount} / {quiz.questions.length} correct
               </p>
             </div>
             
-            <div className="p-4 border-4 border-foreground bg-muted mb-6">
-              <p className="text-sm text-muted-foreground">Your position</p>
-              <p className="text-4xl font-mono font-bold">#{myPosition}</p>
-              <p className="text-sm text-muted-foreground">of {participants.length} players</p>
+            <div className="p-3 sm:p-4 border-4 border-foreground bg-muted mb-4 sm:mb-6">
+              <p className="text-xs sm:text-sm text-muted-foreground">Your position</p>
+              <p className="text-3xl sm:text-4xl font-mono font-bold">#{myPosition}</p>
+              <p className="text-xs sm:text-sm text-muted-foreground">of {participants.length} players</p>
             </div>
 
             <Link to="/">
@@ -311,7 +323,7 @@ const PlayQuiz = () => {
           </CardContent>
         </Card>
 
-        <div className="w-full max-w-lg mt-6">
+        <div className="w-full max-w-lg mt-4 sm:mt-6">
           <Leaderboard
             participants={participants}
             currentParticipantId={participantId || undefined}
@@ -328,24 +340,24 @@ const PlayQuiz = () => {
 
   if (!currentQuestion) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="min-h-screen flex items-center justify-center bg-background p-4">
         <div className="text-center">
-          <p className="text-muted-foreground">Waiting for next question...</p>
+          <p className="text-sm sm:text-base text-muted-foreground">Waiting for next question...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background p-4 md:p-8">
-      <div className="max-w-4xl mx-auto space-y-6">
+    <div className="min-h-screen bg-background p-2 sm:p-4 md:p-8">
+      <div className="max-w-4xl mx-auto space-y-4 sm:space-y-6">
         {/* Score Header */}
-        <div className="flex items-center justify-between px-4">
-          <div className="text-sm text-muted-foreground">{quiz.title}</div>
-          <div className="flex items-center gap-4">
-            <div className="text-sm">
+        <div className="flex items-center justify-between px-2 sm:px-4">
+          <div className="text-xs sm:text-sm text-muted-foreground truncate max-w-[50%]">{quiz.title}</div>
+          <div className="flex items-center gap-2 sm:gap-4">
+            <div className="text-xs sm:text-sm">
               <span className="text-muted-foreground">Score: </span>
-              <span className="font-mono font-bold text-lg">{score}</span>
+              <span className="font-mono font-bold text-base sm:text-lg">{score}</span>
             </div>
           </div>
         </div>

@@ -68,6 +68,7 @@ export type Database = {
           display_name: string
           id: string
           joined_at: string
+          phone_number: string | null
           quiz_id: string
           score: number | null
         }
@@ -76,6 +77,7 @@ export type Database = {
           display_name: string
           id?: string
           joined_at?: string
+          phone_number?: string | null
           quiz_id: string
           score?: number | null
         }
@@ -84,6 +86,7 @@ export type Database = {
           display_name?: string
           id?: string
           joined_at?: string
+          phone_number?: string | null
           quiz_id?: string
           score?: number | null
         }

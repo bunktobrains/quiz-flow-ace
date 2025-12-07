@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -22,6 +22,17 @@ const HostQuiz = () => {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(-1);
   const [questionActive, setQuestionActive] = useState(false);
   const [countdown, setCountdown] = useState<number | null>(null);
+  const [showCorrectAnswer, setShowCorrectAnswer] = useState(false);
+  const autoAdvanceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (autoAdvanceTimeoutRef.current) {
+        clearTimeout(autoAdvanceTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // Subscribe to realtime updates
   useEffect(() => {
@@ -172,6 +183,7 @@ const HostQuiz = () => {
     });
     setCurrentQuestionIndex(0);
     setQuestionActive(true);
+    setShowCorrectAnswer(false);
     
     // Broadcast to participants
     supabase.channel(`quiz-${id}`).send({
@@ -184,6 +196,12 @@ const HostQuiz = () => {
   const handleNextQuestion = async () => {
     if (!quiz) return;
     
+    // Clear any pending auto-advance
+    if (autoAdvanceTimeoutRef.current) {
+      clearTimeout(autoAdvanceTimeoutRef.current);
+      autoAdvanceTimeoutRef.current = null;
+    }
+    
     const nextIndex = currentQuestionIndex + 1;
     if (nextIndex >= quiz.questions.length) {
       handleEndQuiz();
@@ -192,6 +210,7 @@ const HostQuiz = () => {
 
     setCurrentQuestionIndex(nextIndex);
     setQuestionActive(true);
+    setShowCorrectAnswer(false);
     await updateQuizState({ currentQuestionIndex: nextIndex });
 
     supabase.channel(`quiz-${id}`).send({
@@ -203,15 +222,29 @@ const HostQuiz = () => {
 
   const handleQuestionTimeUp = useCallback(() => {
     setQuestionActive(false);
+    setShowCorrectAnswer(true);
     
     supabase.channel(`quiz-${id}`).send({
       type: 'broadcast',
       event: 'question.close',
       payload: { questionIndex: currentQuestionIndex },
     });
-  }, [id, currentQuestionIndex]);
+
+    // Auto-advance to next question after 2 seconds
+    if (quiz && currentQuestionIndex < quiz.questions.length - 1) {
+      autoAdvanceTimeoutRef.current = setTimeout(() => {
+        handleNextQuestion();
+      }, 2000);
+    }
+  }, [id, currentQuestionIndex, quiz]);
 
   const handleEndQuiz = async () => {
+    // Clear any pending auto-advance
+    if (autoAdvanceTimeoutRef.current) {
+      clearTimeout(autoAdvanceTimeoutRef.current);
+      autoAdvanceTimeoutRef.current = null;
+    }
+
     await updateQuizState({
       status: 'ended',
       endedAt: new Date().toISOString(),
@@ -249,10 +282,10 @@ const HostQuiz = () => {
 
   if (isLoading || !quiz) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="min-h-screen flex items-center justify-center bg-background p-4">
         <div className="text-center">
-          <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-muted-foreground">Loading quiz...</p>
+          <div className="w-10 h-10 sm:w-12 sm:h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-sm sm:text-base text-muted-foreground">Loading quiz...</p>
         </div>
       </div>
     );
@@ -265,66 +298,66 @@ const HostQuiz = () => {
     <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="border-b-4 border-foreground sticky top-0 bg-background z-50">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
+        <div className="container mx-auto px-2 sm:px-4 py-2 sm:py-4 flex items-center justify-between">
           <Link to="/dashboard" className="flex items-center gap-2">
-            <Zap className="h-8 w-8 text-primary" />
-            <span className="text-2xl font-bold">QuizLive</span>
+            <Zap className="h-6 w-6 sm:h-8 sm:w-8 text-primary" />
+            <span className="text-lg sm:text-2xl font-bold hidden sm:inline">B2B QUIZES</span>
           </Link>
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2 px-3 py-1 bg-muted border-2 border-foreground">
-              <Users className="h-4 w-4" />
-              <span className="font-mono font-bold">{participants.length}</span>
+          <div className="flex items-center gap-2 sm:gap-4">
+            <div className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1 bg-muted border-2 border-foreground">
+              <Users className="h-3 w-3 sm:h-4 sm:w-4" />
+              <span className="font-mono font-bold text-sm sm:text-base">{participants.length}</span>
             </div>
             <Link to="/dashboard">
-              <Button variant="outline" className="gap-2">
-                <ArrowLeft className="h-4 w-4" />
-                Back
+              <Button variant="outline" className="gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-4">
+                <ArrowLeft className="h-3 w-3 sm:h-4 sm:w-4" />
+                <span className="hidden sm:inline">Back</span>
               </Button>
             </Link>
           </div>
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-8">
-        <div className="grid lg:grid-cols-3 gap-8">
+      <main className="container mx-auto px-2 sm:px-4 py-4 sm:py-8">
+        <div className="grid lg:grid-cols-3 gap-4 sm:gap-8">
           {/* Main Content */}
-          <div className="lg:col-span-2 space-y-6">
+          <div className="lg:col-span-2 space-y-4 sm:space-y-6">
             <Card className="border-4 border-foreground shadow-lg">
-              <CardHeader className="border-b-4 border-foreground bg-primary text-primary-foreground">
-                <CardTitle className="text-2xl">{quiz.title}</CardTitle>
-                <p className="text-sm opacity-90">{quiz.description}</p>
+              <CardHeader className="border-b-4 border-foreground bg-primary text-primary-foreground p-3 sm:p-6">
+                <CardTitle className="text-lg sm:text-2xl">{quiz.title}</CardTitle>
+                <p className="text-xs sm:text-sm opacity-90">{quiz.description}</p>
               </CardHeader>
-              <CardContent className="p-6">
+              <CardContent className="p-3 sm:p-6">
                 {quiz.status === 'ready' && countdown === null && (
-                  <div className="text-center py-8">
-                    <h2 className="text-xl font-bold mb-4">Waiting Room</h2>
-                    <p className="text-muted-foreground mb-6">
+                  <div className="text-center py-6 sm:py-8">
+                    <h2 className="text-lg sm:text-xl font-bold mb-4">Waiting Room</h2>
+                    <p className="text-sm sm:text-base text-muted-foreground mb-6">
                       {participants.length} participants joined
                     </p>
                     <Button
                       onClick={startCountdown}
                       size="lg"
-                      className="gap-2 font-bold text-lg px-8 py-6"
+                      className="gap-2 font-bold text-base sm:text-lg px-6 sm:px-8 py-4 sm:py-6"
                     >
-                      <Play className="h-5 w-5" />
+                      <Play className="h-4 w-4 sm:h-5 sm:w-5" />
                       Start Quiz
                     </Button>
                   </div>
                 )}
 
                 {countdown !== null && (
-                  <div className="text-center py-8">
-                    <p className="text-lg mb-4">Starting in...</p>
-                    <div className="text-8xl font-mono font-bold text-primary animate-pulse">
+                  <div className="text-center py-6 sm:py-8">
+                    <p className="text-base sm:text-lg mb-4">Starting in...</p>
+                    <div className="text-6xl sm:text-8xl font-mono font-bold text-primary animate-pulse">
                       {countdown}
                     </div>
                   </div>
                 )}
 
                 {quiz.status === 'live' && currentQuestion && (
-                  <div className="space-y-6">
-                    <div className="flex items-center justify-between">
-                      <span className="font-mono text-sm font-bold uppercase">
+                  <div className="space-y-4 sm:space-y-6">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-mono text-xs sm:text-sm font-bold uppercase">
                         Question {currentQuestionIndex + 1} / {quiz.questions.length}
                       </span>
                       {questionActive && (
@@ -333,15 +366,20 @@ const HostQuiz = () => {
                           onComplete={handleQuestionTimeUp}
                         />
                       )}
+                      {showCorrectAnswer && (
+                        <span className="text-xs sm:text-sm text-success font-bold">
+                          Next in 2s...
+                        </span>
+                      )}
                     </div>
 
-                    <div className="p-6 border-4 border-foreground bg-muted">
-                      <h3 className="text-xl font-bold mb-4">{currentQuestion.stem}</h3>
-                      <div className="grid grid-cols-2 gap-3">
+                    <div className="p-3 sm:p-6 border-4 border-foreground bg-muted">
+                      <h3 className="text-base sm:text-xl font-bold mb-4">{currentQuestion.stem}</h3>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
                         {currentQuestion.options.map((opt) => (
                           <div
                             key={opt.oid}
-                            className={`p-4 border-2 border-foreground ${
+                            className={`p-3 sm:p-4 border-2 border-foreground text-sm sm:text-base ${
                               currentQuestion.correct.includes(opt.oid)
                                 ? 'bg-success/20 border-success'
                                 : 'bg-background'
@@ -354,14 +392,14 @@ const HostQuiz = () => {
                       </div>
                     </div>
 
-                    <div className="flex gap-4">
+                    <div className="flex flex-wrap gap-2 sm:gap-4">
                       {!questionActive && currentQuestionIndex < quiz.questions.length - 1 && (
                         <Button
                           onClick={handleNextQuestion}
                           size="lg"
-                          className="gap-2 font-bold"
+                          className="gap-2 font-bold text-sm sm:text-base"
                         >
-                          <SkipForward className="h-5 w-5" />
+                          <SkipForward className="h-4 w-4 sm:h-5 sm:w-5" />
                           Next Question
                         </Button>
                       )}
@@ -370,9 +408,9 @@ const HostQuiz = () => {
                           onClick={handleEndQuiz}
                           variant="destructive"
                           size="lg"
-                          className="gap-2 font-bold"
+                          className="gap-2 font-bold text-sm sm:text-base"
                         >
-                          <StopCircle className="h-5 w-5" />
+                          <StopCircle className="h-4 w-4 sm:h-5 sm:w-5" />
                           End Quiz
                         </Button>
                       )}
@@ -381,9 +419,9 @@ const HostQuiz = () => {
                           onClick={handleQuestionTimeUp}
                           variant="outline"
                           size="lg"
-                          className="gap-2"
+                          className="gap-2 text-sm sm:text-base"
                         >
-                          <Pause className="h-5 w-5" />
+                          <Pause className="h-4 w-4 sm:h-5 sm:w-5" />
                           Close Question
                         </Button>
                       )}
@@ -392,13 +430,13 @@ const HostQuiz = () => {
                 )}
 
                 {quiz.status === 'ended' && (
-                  <div className="text-center py-8">
-                    <h2 className="text-2xl font-bold mb-4">Quiz Ended!</h2>
-                    <p className="text-muted-foreground mb-6">
+                  <div className="text-center py-6 sm:py-8">
+                    <h2 className="text-xl sm:text-2xl font-bold mb-4">Quiz Ended!</h2>
+                    <p className="text-sm sm:text-base text-muted-foreground mb-6">
                       Final results are ready
                     </p>
-                    <Button onClick={exportCSV} className="gap-2 font-bold">
-                      <Download className="h-5 w-5" />
+                    <Button onClick={exportCSV} className="gap-2 font-bold text-sm sm:text-base">
+                      <Download className="h-4 w-4 sm:h-5 sm:w-5" />
                       Export Results CSV
                     </Button>
                   </div>
@@ -408,7 +446,7 @@ const HostQuiz = () => {
           </div>
 
           {/* Sidebar */}
-          <div className="space-y-6">
+          <div className="space-y-4 sm:space-y-6">
             {quiz.status === 'ready' && (
               <QRCodeDisplay
                 joinUrl={joinUrl}

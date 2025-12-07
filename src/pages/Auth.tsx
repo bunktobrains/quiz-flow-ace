@@ -103,46 +103,46 @@ const Auth = () => {
     <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
       <header className="border-b-4 border-foreground">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
+        <div className="container mx-auto px-4 py-3 sm:py-4 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2">
-            <Zap className="h-8 w-8 text-primary" />
-            <span className="text-2xl font-bold">QuizLive</span>
+            <Zap className="h-6 w-6 sm:h-8 sm:w-8 text-primary" />
+            <span className="text-xl sm:text-2xl font-bold">B2B QUIZES</span>
           </Link>
           <Link to="/">
-            <Button variant="outline" className="gap-2">
+            <Button variant="outline" className="gap-2 text-sm">
               <ArrowLeft className="h-4 w-4" />
-              Back
+              <span className="hidden sm:inline">Back</span>
             </Button>
           </Link>
         </div>
       </header>
 
-      <main className="flex-1 flex items-center justify-center p-6">
+      <main className="flex-1 flex items-center justify-center p-4 sm:p-6">
         <Card className="w-full max-w-md border-4 border-foreground shadow-lg">
-          <CardHeader className="border-b-4 border-foreground bg-primary text-primary-foreground text-center">
-            <CardTitle className="text-2xl font-bold">Teacher Portal</CardTitle>
-            <CardDescription className="text-primary-foreground/80">
+          <CardHeader className="border-b-4 border-foreground bg-primary text-primary-foreground text-center p-4 sm:p-6">
+            <CardTitle className="text-xl sm:text-2xl font-bold">Teacher Portal</CardTitle>
+            <CardDescription className="text-primary-foreground/80 text-sm">
               Create and host live quizzes for your classroom
             </CardDescription>
           </CardHeader>
-          <CardContent className="p-6">
+          <CardContent className="p-4 sm:p-6">
             <Tabs defaultValue="login" className="w-full">
-              <TabsList className="grid w-full grid-cols-2 mb-6">
-                <TabsTrigger value="login" className="font-bold">Login</TabsTrigger>
-                <TabsTrigger value="signup" className="font-bold">Sign Up</TabsTrigger>
+              <TabsList className="grid w-full grid-cols-2 mb-4 sm:mb-6">
+                <TabsTrigger value="login" className="font-bold text-sm">Login</TabsTrigger>
+                <TabsTrigger value="signup" className="font-bold text-sm">Sign Up</TabsTrigger>
               </TabsList>
 
               <TabsContent value="login">
                 <form onSubmit={handleLogin} className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="login-email">Email</Label>
+                    <Label htmlFor="login-email" className="text-sm">Email</Label>
                     <Input
                       id="login-email"
                       type="email"
                       placeholder="teacher@school.edu"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      className="border-2 border-foreground"
+                      className="border-2 border-foreground h-12"
                       required
                     />
                     {errors.email && (
@@ -150,14 +150,14 @@ const Auth = () => {
                     )}
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="login-password">Password</Label>
+                    <Label htmlFor="login-password" className="text-sm">Password</Label>
                     <Input
                       id="login-password"
                       type="password"
                       placeholder="••••••••"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      className="border-2 border-foreground"
+                      className="border-2 border-foreground h-12"
                       required
                     />
                     {errors.password && (
@@ -166,7 +166,7 @@ const Auth = () => {
                   </div>
                   <Button 
                     type="submit" 
-                    className="w-full font-bold py-6 text-lg" 
+                    className="w-full font-bold py-6 text-base sm:text-lg min-h-[56px]" 
                     disabled={isLoading}
                   >
                     {isLoading ? (
@@ -184,14 +184,14 @@ const Auth = () => {
               <TabsContent value="signup">
                 <form onSubmit={handleSignup} className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="signup-email">Email</Label>
+                    <Label htmlFor="signup-email" className="text-sm">Email</Label>
                     <Input
                       id="signup-email"
                       type="email"
                       placeholder="teacher@school.edu"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      className="border-2 border-foreground"
+                      className="border-2 border-foreground h-12"
                       required
                     />
                     {errors.email && (
@@ -199,14 +199,14 @@ const Auth = () => {
                     )}
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="signup-password">Password</Label>
+                    <Label htmlFor="signup-password" className="text-sm">Password</Label>
                     <Input
                       id="signup-password"
                       type="password"
                       placeholder="••••••••"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      className="border-2 border-foreground"
+                      className="border-2 border-foreground h-12"
                       required
                     />
                     {errors.password && (
@@ -215,7 +215,7 @@ const Auth = () => {
                   </div>
                   <Button 
                     type="submit" 
-                    className="w-full font-bold py-6 text-lg" 
+                    className="w-full font-bold py-6 text-base sm:text-lg min-h-[56px]" 
                     disabled={isLoading}
                   >
                     {isLoading ? (
