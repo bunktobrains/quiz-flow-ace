@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Zap, ArrowLeft, QrCode } from 'lucide-react';
 import { toast } from 'sonner';
 import { z } from 'zod';
+import { supabase } from '@/integrations/supabase/client';
 
 const joinSchema = z.object({
   code: z.string().trim().min(1, 'Please enter a quiz code'),
@@ -21,6 +22,7 @@ const JoinQuiz = () => {
   const [displayName, setDisplayName] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [errors, setErrors] = useState<{ code?: string; displayName?: string; phoneNumber?: string }>({});
+  const [isJoining, setIsJoining] = useState(false);
 
   // Check URL params for quiz code
   useEffect(() => {
@@ -31,7 +33,7 @@ const JoinQuiz = () => {
     }
   }, []);
 
-  const handleJoin = () => {
+  const handleJoin = async () => {
     const result = joinSchema.safeParse({ code, displayName, phoneNumber });
     if (!result.success) {
       const fieldErrors: { code?: string; displayName?: string; phoneNumber?: string } = {};
@@ -44,23 +46,42 @@ const JoinQuiz = () => {
       return;
     }
     setErrors({});
+    setIsJoining(true);
 
-    // Extract quiz ID from URL if present, otherwise use code as token
-    let resolvedQuizId = quizId;
-    
-    if (!resolvedQuizId) {
-      // Try to parse code as quizId|token format
-      if (code.includes('|')) {
-        const [parsedQuizId] = code.split('|');
-        resolvedQuizId = parsedQuizId;
-      } else {
-        toast.error('Invalid quiz code format');
-        return;
+    try {
+      // Extract quiz ID from URL if present, otherwise use code as token
+      let resolvedQuizId = quizId;
+      
+      if (!resolvedQuizId) {
+        // Try to parse code as quizId|token format
+        if (code.includes('|')) {
+          const [parsedQuizId] = code.split('|');
+          resolvedQuizId = parsedQuizId;
+        } else {
+          // Lookup quiz by simple token
+          const { data, error } = await supabase
+            .from('quizzes')
+            .select('id')
+            .eq('quiz_data->join->>token', code)
+            .single();
+
+          if (error || !data) {
+            console.error('Error finding quiz:', error);
+            toast.error('Invalid quiz code');
+            setIsJoining(false);
+            return;
+          }
+          resolvedQuizId = data.id;
+        }
       }
-    }
 
-    // Navigate to quiz play page with display name and phone
-    navigate(`/play/${resolvedQuizId}?name=${encodeURIComponent(displayName)}&t=${code}&phone=${encodeURIComponent(phoneNumber)}`);
+      // Navigate to quiz play page with display name and phone
+      navigate(`/play/${resolvedQuizId}?name=${encodeURIComponent(displayName)}&t=${code}&phone=${encodeURIComponent(phoneNumber)}`);
+    } catch (error) {
+      console.error('Join error:', error);
+      toast.error('Failed to join quiz');
+      setIsJoining(false);
+    }
   };
 
   return (
@@ -142,8 +163,9 @@ const JoinQuiz = () => {
               onClick={handleJoin}
               className="w-full font-bold py-6 text-base sm:text-lg min-h-[56px]"
               size="lg"
+              disabled={isJoining}
             >
-              Join Quiz
+              {isJoining ? 'Joining...' : 'Join Quiz'}
             </Button>
           </CardContent>
         </Card>
