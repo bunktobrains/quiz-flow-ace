@@ -33,6 +33,13 @@ const PlayQuiz = () => {
   const [quizStatus, setQuizStatus] = useState<Quiz['status']>('ready');
   const [isLoading, setIsLoading] = useState(true);
   const autoAdvanceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const questionSubmittedRef = useRef(false);
+  const handleQuestionTimeUpRef = useRef<() => void>(() => {});
+  
+  // Reset submission status when question changes
+  useEffect(() => {
+    questionSubmittedRef.current = false;
+  }, [currentQuestionIndex]);
 
   // Load quiz and join
   useEffect(() => {
@@ -73,10 +80,10 @@ const PlayQuiz = () => {
         setShowResult(false);
       })
       .on('broadcast', { event: 'question.close' }, () => {
-        setQuestionActive(false);
-        setShowResult(true);
+        handleQuestionTimeUpRef.current();
       })
       .on('broadcast', { event: 'quiz.end' }, () => {
+        handleQuestionTimeUpRef.current();
         setQuizStatus('ended');
         setQuestionActive(false);
       })
@@ -221,6 +228,10 @@ const PlayQuiz = () => {
   const handleQuestionTimeUp = useCallback(async () => {
     if (!quiz || !participantId || currentQuestionIndex < 0) return;
 
+    // Prevent double submission
+    if (questionSubmittedRef.current) return;
+    questionSubmittedRef.current = true;
+
     setQuestionActive(false);
     setShowResult(true);
 
@@ -260,6 +271,10 @@ const PlayQuiz = () => {
       points_earned: pointsEarned,
     } as never);
   }, [quiz, participantId, currentQuestionIndex, selectedOptions, score, correctCount, id]);
+
+  useEffect(() => {
+    handleQuestionTimeUpRef.current = handleQuestionTimeUp;
+  }, [handleQuestionTimeUp]);
 
   if (isLoading) {
     return (
