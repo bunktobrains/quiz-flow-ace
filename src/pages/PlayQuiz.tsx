@@ -33,6 +33,13 @@ const PlayQuiz = () => {
   const [quizStatus, setQuizStatus] = useState<Quiz['status']>('ready');
   const [isLoading, setIsLoading] = useState(true);
   const autoAdvanceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const questionSubmittedRef = useRef(false);
+  const handleQuestionTimeUpRef = useRef<() => void>(() => {});
+  
+  // Reset submission status when question changes
+  useEffect(() => {
+    questionSubmittedRef.current = false;
+  }, [currentQuestionIndex]);
 
   // Load quiz and join
   useEffect(() => {
@@ -73,10 +80,10 @@ const PlayQuiz = () => {
         setShowResult(false);
       })
       .on('broadcast', { event: 'question.close' }, () => {
-        setQuestionActive(false);
-        setShowResult(true);
+        handleQuestionTimeUpRef.current();
       })
       .on('broadcast', { event: 'quiz.end' }, () => {
+        handleQuestionTimeUpRef.current();
         setQuizStatus('ended');
         setQuestionActive(false);
       })
@@ -221,6 +228,10 @@ const PlayQuiz = () => {
   const handleQuestionTimeUp = useCallback(async () => {
     if (!quiz || !participantId || currentQuestionIndex < 0) return;
 
+    // Prevent double submission
+    if (questionSubmittedRef.current) return;
+    questionSubmittedRef.current = true;
+
     setQuestionActive(false);
     setShowResult(true);
 
@@ -242,13 +253,25 @@ const PlayQuiz = () => {
     setCorrectCount(newCorrectCount);
 
     // Update score in database
-    await supabase
+    const { error: updateError } = await supabase
       .from('quiz_participants')
       .update({
         score: newScore,
         correct_count: newCorrectCount,
       } as never)
       .eq('id', participantId);
+
+    if (updateError) {
+      console.error('Error updating score:', updateError);
+      // Retry once if failed
+      await supabase
+        .from('quiz_participants')
+        .update({
+          score: newScore,
+          correct_count: newCorrectCount,
+        } as never)
+        .eq('id', participantId);
+    }
 
     // Save answer
     await supabase.from('quiz_answers').insert({
@@ -259,7 +282,17 @@ const PlayQuiz = () => {
       is_correct: isCorrect,
       points_earned: pointsEarned,
     } as never);
+    
+    if (isCorrect) {
+      toast.success(`Correct! +${pointsEarned} points`);
+    } else {
+      toast.error('Incorrect answer');
+    }
   }, [quiz, participantId, currentQuestionIndex, selectedOptions, score, correctCount, id]);
+
+  useEffect(() => {
+    handleQuestionTimeUpRef.current = handleQuestionTimeUp;
+  }, [handleQuestionTimeUp]);
 
   if (isLoading) {
     return (
