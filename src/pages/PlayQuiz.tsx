@@ -253,13 +253,25 @@ const PlayQuiz = () => {
     setCorrectCount(newCorrectCount);
 
     // Update score in database
-    await supabase
+    const { error: updateError } = await supabase
       .from('quiz_participants')
       .update({
         score: newScore,
         correct_count: newCorrectCount,
       } as never)
       .eq('id', participantId);
+
+    if (updateError) {
+      console.error('Error updating score:', updateError);
+      // Retry once if failed
+      await supabase
+        .from('quiz_participants')
+        .update({
+          score: newScore,
+          correct_count: newCorrectCount,
+        } as never)
+        .eq('id', participantId);
+    }
 
     // Save answer
     await supabase.from('quiz_answers').insert({
@@ -270,6 +282,12 @@ const PlayQuiz = () => {
       is_correct: isCorrect,
       points_earned: pointsEarned,
     } as never);
+    
+    if (isCorrect) {
+      toast.success(`Correct! +${pointsEarned} points`);
+    } else {
+      toast.error('Incorrect answer');
+    }
   }, [quiz, participantId, currentQuestionIndex, selectedOptions, score, correctCount, id]);
 
   useEffect(() => {

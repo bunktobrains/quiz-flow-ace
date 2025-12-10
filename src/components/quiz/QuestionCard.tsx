@@ -96,7 +96,7 @@ export const QuestionCard = ({
                 key={option.oid}
                 variant={buttonVariant}
                 className={cn(
-                  'h-auto py-3 sm:py-4 px-3 sm:px-6 justify-start text-left border-2 font-normal min-h-[48px]',
+                  'h-auto py-3 sm:py-4 px-3 sm:px-6 justify-start text-left border-2 font-normal min-h-[48px] whitespace-normal break-words',
                   additionalClasses,
                   !isActive && 'pointer-events-none opacity-70'
                 )}
